@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PassNest - Secure Password Manager</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .auth-container {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 420px;
+            margin: 1rem;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-header h1 {
+            font-size: 2.25rem;
+            font-weight: bold;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-header p {
+            color: #4a5568;
+            font-size: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2d3748;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            color: #2d3748;
+        }
+
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 2.5rem;
+            cursor: pointer;
+            color: #718096;
+            transition: color 0.3s ease;
+        }
+
+        .password-toggle:hover {
+            color: #4a5568;
+        }
+
+        .auth-button {
+            width: 100%;
+            padding: 0.75rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .auth-button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .auth-button:disabled {
+            background: #a0aec0;
+            cursor: not-allowed;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: #718096;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .auth-divider span {
+            padding: 0 1rem;
+            font-size: 0.875rem;
+        }
+
+        .social-auth-button {
+            width: 100%;
+            padding: 0.75rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #2d3748;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .social-auth-button:hover {
+            border-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .social-auth-button img {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.875rem;
+            color: #718096;
+        }
+
+        .auth-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            margin-left: 0.25rem;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            width: 1rem;
+            height: 1rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1>🔒 PassNest</h1>
+            <p>Your secure password vault</p>
+        </div>
+
+        <form id="login-form" class="space-y-4">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" required placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+                <span class="password-toggle" onclick="togglePassword()">👁️</span>
+            </div>
+            <button type="submit" class="auth-button">
+                <span class="button-text">Log In</span>
+                <div class="spinner" style="display: none;"></div>
+            </button>
+
+            <div class="auth-divider">
+                <span>OR</span>
+            </div>
+
+            <button type="button" class="social-auth-button" onclick="handleGoogleSignIn()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
+                <span>Continue with Google</span>
+            </button>
+
+            <div class="auth-footer">
+                <button type="button" onclick="showResetPassword()" class="text-purple-600 hover:underline">Forgot Password?</button>
+                <span class="mx-2">•</span>
+                <a href="#" onclick="showRegistration()">Create Account</a>
+            </div>
+        </form>
+    </div>
+
+    <div id="recaptcha-container"></div>
+
+    <script>
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggle = document.querySelector('.password-toggle');
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggle.style.color = '#667eea';
+            } else {
+                passwordInput.type = 'password';
+                toggle.style.color = '#718096';
+            }
+        }
+
+        function showRegistration() {
+            const form = document.getElementById('login-form');
+            const header = document.querySelector('.auth-header p');
+            header.textContent = 'Create your secure account';
+
+            form.innerHTML = `
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                    <span class="password-toggle" onclick="togglePassword()">👁️</span>
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required placeholder="Confirm your password">
+                </div>
+                <button type="submit" class="auth-button">
+                    <span class="button-text">Create Account</span>
+                    <div class="spinner" style="display: none;"></div>
+                </button>
+                <div class="auth-footer">
+                    <a href="#" onclick="showLogin()">Back to Login</a>
+                </div>
+            `;
+            form.removeEventListener('submit', handleLogin);
+            form.addEventListener('submit', handleRegistration);
+        }
+
+        function showLogin() {
+            const form = document.getElementById('login-form');
+            const header = document.querySelector('.auth-header p');
+            header.textContent = 'Your secure password vault';
+
+            form.innerHTML = `
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required placeholder="Enter your password">
+                    <span class="password-toggle" onclick="togglePassword()">👁️</span>
+                </div>
+                <button type="submit" class="auth-button">
+                    <span class="button-text">Log In</span>
+                    <div class="spinner" style="display: none;"></div>
+                </button>
+
+                <div class="auth-divider">
+                    <span>OR</span>
+                </div>
+
+                <button type="button" class="social-auth-button" onclick="handleGoogleSignIn()">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
+                    <span>Continue with Google</span>
+                </button>
+
+                <div class="auth-footer">
+                    <button type="button" onclick="showResetPassword()" class="text-purple-600 hover:underline">Forgot Password?</button>
+                    <span class="mx-2">•</span>
+                    <a href="#" onclick="showRegistration()">Create Account</a>
+                </div>
+            `;
+            form.removeEventListener('submit', handleRegistration);
+            form.addEventListener('submit', handleLogin);
+        }
+
+        function showResetPassword() {
+            const form = document.getElementById('login-form');
+            const header = document.querySelector('.auth-header p');
+            header.textContent = 'Reset your password';
+
+            form.innerHTML = `
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                </div>
+                <button type="submit" class="auth-button">
+                    <span class="button-text">Reset Password</span>
+                    <div class="spinner" style="display: none;"></div>
+                </button>
+                <div class="auth-footer">
+                    <a href="#" onclick="showLogin()">Back to Login</a>
+                </div>
+            `;
+            form.removeEventListener('submit', handleLogin);
+            form.addEventListener('submit', handleForgotPassword);
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const button = document.querySelector('.auth-button');
+            const buttonText = button.querySelector('.button-text');
+            const spinner = button.querySelector('.spinner');
+
+            button.disabled = true;
+            buttonText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                const result = await window.passNestBackend.loginUser(email, password);
+                if (result.success) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                alert('Login failed: ' + error.message);
+                button.disabled = false;
+                buttonText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function handleRegistration(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const button = document.querySelector('.auth-button');
+            const buttonText = button.querySelector('.button-text');
+            const spinner = button.querySelector('.spinner');
+
+            if (password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            button.disabled = true;
+            buttonText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                const result = await window.passNestBackend.registerUser(email, password);
+                if (result.success) {
+                    alert('Registration successful! Please log in.');
+                    showLogin();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                alert('Registration failed: ' + error.message);
+                button.disabled = false;
+                buttonText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const button = document.querySelector('.auth-button');
+            const buttonText = button.querySelector('.button-text');
+            const spinner = button.querySelector('.spinner');
+
+            button.disabled = true;
+            buttonText.style.display = 'none';
+            spinner.style.display = 'block';
+
+            try {
+                await firebase.auth().sendPasswordResetEmail(email);
+                alert('Password reset email sent! Please check your inbox.');
+                showLogin();
+            } catch (error) {
+                alert('Failed to send reset email: ' + error.message);
+                button.disabled = false;
+                buttonText.style.display = 'block';
+                spinner.style.display = 'none';
+            }
+        }
+
+        function handleGoogleSignIn() {
+            const button = document.querySelector('.social-auth-button');
+            button.disabled = true;
+            window.passNestBackend.signInWithGoogle()
+                .then((result) => {
+                    if (result.success) {
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        throw new Error(result.error);
+                    }
+                })
+                .catch((error) => {
+                    alert('Google sign-in failed: ' + error.message);
+                })
+                .finally(() => {
+                    button.disabled = false;
+                });
+        }
+
+        let appVerifier;
+        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+            'size': 'invisible'
+        });
+
+        function initiatePhoneAuth() {
+            const phoneNumber = prompt('Please enter your phone number with country code:');
+            if (!phoneNumber) return;
+
+            appVerifier = window.recaptchaVerifier;
+            firebase.auth().signInWithPhoneNumber(phoneNumber, appVerifier)
+                .then((confirmationResult) => {
+                    const code = prompt('Enter SMS verification code');
+                    return confirmationResult.confirm(code);
+                })
+                .then(() => {
+                    window.location.href = 'dashboard.html';
+                })
+                .catch((error) => {
+                    alert('Phone authentication failed: ' + error.message);
+                });
+        }
+
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                console.log('User is signed in:', user.email);
+            } else {
+                console.log('User is signed out');
+            }
+        });
+
+        // Initialize form with login handler
+        document.getElementById('login-form').addEventListener('submit', handleLogin);
+    </script>
+</body>
+</html>

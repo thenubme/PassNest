@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Manager Dashboard</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:400,600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f6fa 0%, #e3e9f7 100%);
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+            padding: 1.5rem 2rem;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 0 0 18px 18px;
+            box-shadow: 0 2px 12px rgba(33,147,176,0.08);
+        }
+
+        .navbar h1 {
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: 2px solid white;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: white;
+            color: #2193b0;
+            box-shadow: 0 2px 8px rgba(33,147,176,0.10);
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 2.5rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .add-password, #passwordGeneratorSection {
+            background: white;
+            padding: 2rem 2.5rem;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(33,147,176,0.08);
+            margin-bottom: 2.5rem;
+        }
+
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+            opacity: 0.12;
+            border-radius: 1px;
+            margin: 2.5rem 0;
+        }
+
+        .form-group label {
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e4ea;
+            border-radius: 7px;
+            font-size: 16px;
+            margin-bottom: 0.5rem;
+            background: #f8fafc;
+            transition: border 0.2s;
+        }
+
+        .form-group input:focus {
+            border: 1.5px solid #2193b0;
+            outline: none;
+        }
+
+        /* Colorful slider styles */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, #ff512f 0%, #dd2476 50%, #2193b0 100%);
+            border-radius: 5px;
+            outline: none;
+            transition: background 0.3s;
+            margin: 0 0.5rem;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2193b0 0%, #ff512f 100%);
+            box-shadow: 0 2px 8px rgba(33,147,176,0.15);
+            border: 3px solid #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        input[type=range]:focus::-webkit-slider-thumb {
+            background: linear-gradient(135deg, #ff512f 0%, #2193b0 100%);
+        }
+        input[type=range]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2193b0 0%, #ff512f 100%);
+            box-shadow: 0 2px 8px rgba(33,147,176,0.15);
+            border: 3px solid #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        input[type=range]:focus::-moz-range-thumb {
+            background: linear-gradient(135deg, #ff512f 0%, #2193b0 100%);
+        }
+        input[type=range]::-ms-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2193b0 0%, #ff512f 100%);
+            box-shadow: 0 2px 8px rgba(33,147,176,0.15);
+            border: 3px solid #fff;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        input[type=range]:focus::-ms-thumb {
+            background: linear-gradient(135deg, #ff512f 0%, #2193b0 100%);
+        }
+        input[type=range]::-ms-fill-lower {
+            background: #ff512f;
+        }
+        input[type=range]::-ms-fill-upper {
+            background: #2193b0;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        /* Hide the outline for Firefox */
+        input[type=range]::-moz-focus-outer {
+            border: 0;
+        }
+        /* Custom radio/checkbox styling */
+        input[type="checkbox"], input[type="radio"] {
+            accent-color: #2193b0;
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        input[type="radio"]:checked {
+            box-shadow: 0 0 0 3px #2193b033;
+        }
+        label[for^="length"] {
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: #197a9a;
+        }
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+        .add-btn {
+            background: linear-gradient(90deg, #2193b0 0%, #6dd5ed 100%);
+            color: white;
+            padding: 10px 28px;
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            margin-right: 1rem;
+            box-shadow: 0 2px 8px rgba(33,147,176,0.10);
+            transition: background 0.2s, box-shadow 0.2s;
+        }
+        .add-btn:hover {
+            background: #197a9a;
+            box-shadow: 0 4px 16px rgba(33,147,176,0.13);
+        }
+        .passwords-list {
+            background: white;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(33,147,176,0.08);
+            overflow: hidden;
+        }
+        .password-item {
+            padding: 1.2rem 2rem;
+            border-bottom: 1px solid #f0f2f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .password-item:hover {
+            background: #f8fafc;
+        }
+        .password-details h3 {
+            color: #2193b0;
+            margin-bottom: 0.25rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        .password-details p {
+            color: #666;
+            font-size: 0.97rem;
+        }
+        .password-actions button {
+            padding: 7px 16px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 15px;
+            transition: background 0.2s;
+        }
+        .copy-btn {
+            background: #4CAF50;
+            color: white;
+        }
+        .copy-btn:hover {
+            background: #388e3c;
+        }
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+        }
+        .delete-btn:hover {
+            background: #c62828;
+        }
+        #message {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            display: none;
+            font-size: 1.1rem;
+            font-weight: 500;
+            z-index: 2000;
+        }
+        .success {
+            background: #4CAF50;
+            color: white;
+        }
+        .error {
+            background: #ff4444;
+            color: white;
+        }
+        /* Responsive */
+        @media (max-width: 700px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+            .add-password, #passwordGeneratorSection {
+                padding: 1rem 0.5rem;
+            }
+            .password-item {
+                padding: 1rem 0.5rem;
+            }
+        }
+        /* Vault unlock modal */
+        .vault-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .vault-modal .modal-content {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 10px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .vault-modal input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 1rem 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        .vault-modal button {
+            background: #2193b0;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .vault-modal button:hover {
+            background: #197a9a;
+        }
+        /* Modal logout button */
+        .modal-logout-btn {
+            background: transparent;
+            color: #ff4444;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 1rem;
+        }
+        .modal-logout-btn:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Vault modal (create or unlock) -->
+    <div id="vaultModal" class="vault-modal">
+        <div class="modal-content">
+            <h2 id="vaultModalHeader">Unlock Your Vault</h2>
+            <input type="password" id="masterPasswordInput" placeholder="Master Password" />
+            <input type="password" id="confirmMasterPasswordInput" placeholder="Confirm Password" style="display:none;" />
+            <div>
+                <button id="unlockBtn">Unlock</button>
+                <button id="createMasterBtn" style="display:none; margin-left:1rem;">Create Master Password</button>
+                <button id="logoutModalBtn" class="modal-logout-btn">Logout</button>
+            </div>
+        </div>
+    </div>
+    <nav class="navbar">
+        <h1>Password Manager</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <button id="logoutBtn" class="logout-btn">Logout</button>
+            <button id="showStoredPasswordsBtn" class="logout-btn">Stored Passwords</button>
+            <!-- Ensure this button is always visible -->
+            <button id="resetVaultBtn" class="logout-btn" style="background: #ff9800; color: white;">Reset Vault Password</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="add-password">
+            <h2>Add New Password</h2>
+            <form id="addPasswordForm">
+                <div class="form-group">
+                    <label for="website">Website</label>
+                    <input type="text" id="website" required>
+                </div>
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required>
+                </div>
+                <button type="submit" class="add-btn">Add Password</button>
+            </form>
+        </div>
+        <!-- Password Generator UI -->
+        <div class="add-password" id="passwordGeneratorSection" style="margin-bottom:2rem;">
+            <h2>Customize your password</h2>
+            <div style="display: flex; align-items: flex-start; gap: 2rem; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 220px;">
+                    <label for="length">Password Length</label>
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <input type="number" id="length" value="16" min="8" max="64" style="width:60px;">
+                        <input type="range" id="lengthSlider" value="16" min="8" max="64" style="flex:1;">
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="radio" name="charsetMode" id="easySay" value="easySay"> Easy to say <span title="No symbols, no ambiguous characters">&#9432;</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="radio" name="charsetMode" id="easyRead" value="easyRead"> Easy to read <span title="No ambiguous characters">&#9432;</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="radio" name="charsetMode" id="allChars" value="allChars" checked> All characters <span title="All available characters">&#9432;</span>
+                        </label>
+                    </div>
+                </div>
+                <div style="flex: 1; min-width: 220px;">
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label><input type="checkbox" id="upper" checked> Uppercase</label>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label><input type="checkbox" id="lower" checked> Lowercase</label>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label><input type="checkbox" id="numbers" checked> Numbers</label>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0.5rem;">
+                        <label><input type="checkbox" id="symbols" checked> Symbols</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="button" onclick="handleGenerate()" class="add-btn">Generate</button>
+                <button type="button" onclick="handleCopy()" class="add-btn" style="background:#4CAF50;">Copy</button>
+                <span id="generatorCopyMessage" style="margin-left:10px; color:#2193b0; font-weight:600; display:none;">Copied!</span>
+            </div>
+            <div class="form-group">
+                <input type="text" id="output" readonly style="width:100%;font-size:1.1rem;">
+            </div>
+        </div>
+        <div class="passwords-list" id="passwordsList">
+            <!-- Passwords will be dynamically added here -->
+        </div>
+    </div>
+
+    <div id="message"></div>
+
+    <!-- Stored Passwords Modal -->
+    <div id="storedPasswordsModal" class="vault-modal" style="display:none;">
+        <div class="modal-content" style="max-width:600px;">
+            <h2>Stored Passwords</h2>
+            <div id="websitesList"></div>
+            <div id="passwordDetails" style="margin-top:1.5rem; display:none;">
+                <h3 id="selectedWebsite"></h3>
+                <input type="text" id="decryptedPassword" readonly style="width:80%;margin-bottom:1rem;" />
+                <button id="copyDecryptedBtn">Copy Password</button>
+            </div>
+            <button id="closeStoredPasswordsBtn" class="modal-logout-btn" style="color:#2193b0;">Close</button>
+        </div>
+    </div>
+
+    <!-- Reset Vault Password Modal -->
+    <div id="resetVaultModal" class="vault-modal" style="display:none;">
+        <div class="modal-content">
+            <h2>Reset Vault Password</h2>
+            <input type="password" id="currentVaultPassword" placeholder="Current Master Password" />
+            <input type="password" id="newVaultPassword" placeholder="New Master Password" />
+            <input type="password" id="confirmNewVaultPassword" placeholder="Confirm New Master Password" />
+            <div>
+                <button id="resetVaultConfirmBtn">Reset Password</button>
+                <button id="resetVaultCancelBtn" class="modal-logout-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="firebase.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="VaultSessionManager.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
